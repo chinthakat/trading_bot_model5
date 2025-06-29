@@ -286,3 +286,25 @@ test_results/
 # Custom project specific (uncomment as needed)
 # config/training_config.json  # if contains sensitive settings
 # config/config.json          # if contains sensitive settings
+
+# Generated charts
+# GRAPH_GEN and TRADE_ANALYSIS write PNGs next to the script or into these
+# folders. They are regenerated from data + trade traces, so none are tracked.
+graphs/
+example_graphs/
+trade_analysis_*.png
+*_chart.png
+*_demo.png
+test_graph.png
+
+# Archived training sessions written by src/utils/archiver.py (default dir)
+archives/
+
+
+# Note on the blanket *.json / *.csv rules above
+# ---------------------------------------------
+# Those rules also exclude config/training_config.json and
+# config/logging_config.json, which src/train_memory_efficient.py expects.
+# Those files are NOT in this repository - see the Configuration section of
+# README.md. If you ever want to track a sanitised template, add an explicit
+# negation such as `!config/training_config.example.json` here.
