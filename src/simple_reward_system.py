@@ -102,7 +102,23 @@ class SimpleRewardSystem:
         
         # 4. Profit/Loss reward for closed positions
         if closed_position and action.startswith('CLOSE'):
-            total_reward += self._get_profit_loss_reward(closed_position)
+            profit_loss_reward = self._get_profit_loss_reward(closed_position)
+            total_reward += profit_loss_reward
+            
+            pnl_pct = closed_position.get('pnl_percentage', 0)
+            
+            # ENHANCED: Extra bonus for ANY profitable close
+            if pnl_pct > 0:
+                total_reward += self.config.get('profitable_close_bonus', 1.0)
+                # Log this significant reward event for visibility
+                print(f"🎯 PROFITABLE CLOSE BONUS: +{self.config.get('profitable_close_bonus', 1.0):.2f} (P&L: {pnl_pct*100:.2f}%)")
+            
+            # ENHANCED: Extra penalty for ANY losing close
+            elif pnl_pct < 0:
+                losing_penalty = self.config.get('losing_close_penalty', -2.0)
+                total_reward += losing_penalty
+                # Log this significant penalty event for visibility
+                print(f"💀 LOSING CLOSE PENALTY: {losing_penalty:.2f} (P&L: {pnl_pct*100:.2f}%)")
         
         # 5. Position closure encouragement
         if action.startswith('CLOSE') and len(open_positions) > self.config['closure_bonus_threshold']:
@@ -118,6 +134,15 @@ class SimpleRewardSystem:
             self.steps_since_last_trade = 0
         else:
             self.steps_since_last_trade += 1
+        
+        # Cap the total reward to prevent extreme values
+        total_reward = max(-50.0, min(50.0, total_reward))
+        
+        # Log detailed reward breakdown for profitable and losing closes
+        if action.startswith('CLOSE') and closed_position:
+            pnl_pct = closed_position.get('pnl_percentage', 0)
+            if pnl_pct != 0:  # Log for both profits and losses
+                self.log_reward_breakdown(action, total_reward, closed_position)
         
         return total_reward
     
@@ -168,11 +193,11 @@ class SimpleRewardSystem:
         """
         reward = 0.0
         
-        # Heavy penalty for exceeding position threshold
+        # Heavy penalty for exceeding position threshold (with cap)
         if num_open_positions > self.config['max_positions_threshold']:
             excess_positions = num_open_positions - self.config['max_positions_threshold']
-            # Exponentially increasing penalty
-            penalty = -self.config['position_penalty_multiplier'] * (excess_positions ** 2)
+            # Exponentially increasing penalty with cap to prevent extreme values
+            penalty = -self.config['position_penalty_multiplier'] * min(25, excess_positions ** 2)  # Cap at -12.5
             reward += penalty
         
         # Encourage closing when we have too many positions
@@ -193,6 +218,7 @@ class SimpleRewardSystem:
     def _get_profit_loss_reward(self, closed_position: Dict) -> float:
         """
         Calculate multi-level reward/penalty based on profit margin
+        ENHANCED: More granular profit tiers with higher rewards for profitable closes
         
         Args:
             closed_position: Dictionary containing position info including 'pnl_percentage'
@@ -203,18 +229,19 @@ class SimpleRewardSystem:
         pnl_pct = closed_position['pnl_percentage']
         
         # Determine reward based on profit margin levels
-        if pnl_pct > 0:  # Profit
-            # Find the appropriate profit tier
-            for i, margin in enumerate(self.config['profit_margins']):
-                if pnl_pct >= margin:
-                    continue
-                else:
-                    # Use the previous tier's reward
-                    tier_index = max(0, i - 1)
-                    return self.config['profit_rewards'][tier_index]
+        if pnl_pct > 0:  # Profit - ENHANCED REWARDS
+            # Find the highest applicable profit tier
+            for i in range(len(self.config['profit_margins']) - 1, -1, -1):
+                if pnl_pct >= self.config['profit_margins'][i]:
+                    reward = self.config['profit_rewards'][i]
+                    print(f"💰 PROFIT TIER {i+1}: {pnl_pct*100:.2f}% = +{reward:.2f} reward")
+                    return reward
             
-            # If profit exceeds all margins, use the highest reward
-            return self.config['profit_rewards'][-1]
+            # Even tiny profits get the smallest reward
+            if pnl_pct > 0:
+                reward = self.config['profit_rewards'][0]
+                print(f"💰 SMALL PROFIT: {pnl_pct*100:.2f}% = +{reward:.2f} reward")
+                return reward
         
         else:  # Loss
             # Find the appropriate loss tier
@@ -224,10 +251,16 @@ class SimpleRewardSystem:
                 else:
                     # Use the previous tier's penalty
                     tier_index = max(0, i - 1)
-                    return self.config['loss_penalties'][tier_index]
+                    penalty = self.config['loss_penalties'][tier_index]
+                    print(f"📉 LOSS TIER {tier_index+1}: {pnl_pct*100:.2f}% = {penalty:.2f} penalty")
+                    return penalty
             
             # If loss exceeds all margins, use the highest penalty
-            return self.config['loss_penalties'][-1]
+            penalty = self.config['loss_penalties'][-1]
+            print(f"📉 MAJOR LOSS: {pnl_pct*100:.2f}% = {penalty:.2f} penalty")
+            return penalty
+        
+        return 0.0
     
     def _update_action_history(self, action: str) -> None:
         """Update the action history for exploration tracking"""
@@ -302,6 +335,34 @@ class SimpleRewardSystem:
         exploration_score = entropy / max_entropy if max_entropy > 0 else 0.0
         
         return exploration_score
+    
+    def log_reward_breakdown(self, action: str, total_reward: float, 
+                           closed_position: Optional[Dict] = None) -> None:
+        """
+        Log detailed reward breakdown for analysis, especially for profitable and losing closes
+        """
+        if action.startswith('CLOSE') and closed_position:
+            pnl_pct = closed_position.get('pnl_percentage', 0)
+            
+            if pnl_pct > 0:  # Profitable close
+                print(f"\n🎯 === PROFITABLE CLOSE REWARD BREAKDOWN ===")
+                print(f"   Action: {action}")
+                print(f"   P&L: +{pnl_pct*100:.2f}%")
+                print(f"   Base Close Reward: +{self.config['close_reward']:.2f}")
+                print(f"   Profit Tier Reward: +{self._get_profit_loss_reward(closed_position):.2f}")
+                print(f"   Profitable Close Bonus: +{self.config.get('profitable_close_bonus', 1.0):.2f}")
+                print(f"   TOTAL REWARD: +{total_reward:.2f}")
+                print(f"🎯 =======================================\n")
+            
+            elif pnl_pct < 0:  # Losing close
+                print(f"\n💀 === LOSING CLOSE PENALTY BREAKDOWN ===")
+                print(f"   Action: {action}")
+                print(f"   P&L: {pnl_pct*100:.2f}%")
+                print(f"   Base Close Reward: +{self.config['close_reward']:.2f}")
+                print(f"   Loss Tier Penalty: {self._get_profit_loss_reward(closed_position):.2f}")
+                print(f"   Losing Close Penalty: {self.config.get('losing_close_penalty', -2.0):.2f}")
+                print(f"   TOTAL REWARD: {total_reward:.2f}")
+                print(f"💀 =====================================\n")
 
 
 # Example usage and testing

@@ -21,33 +21,37 @@ SIMPLE_REWARD_CONFIG = {
     
     # === PROFIT/LOSS REWARDS ===
     # Profit margins (as decimals: 0.01 = 1%)
-    'profit_margins': [0.01, 0.03, 0.05, 0.10],  # 1%, 3%, 5%, 10%
-    'profit_rewards': [1.0, 2.5, 5.0, 10.0],     # Corresponding rewards
+    'profit_margins': [0.005, 0.01, 0.02, 0.03, 0.05, 0.08, 0.10, 0.15],  # 0.5%, 1%, 2%, 3%, 5%, 8%, 10%, 15%
+    'profit_rewards': [2.0, 5.0, 8.0, 12.0, 18.0, 25.0, 35.0, 50.0],     # SIGNIFICANTLY ENHANCED profitable close rewards
     
     # Loss margins (as decimals: -0.01 = -1%)
-    'loss_margins': [-0.01, -0.03, -0.05, -0.10],  # -1%, -3%, -5%, -10%
-    'loss_penalties': [-0.5, -1.5, -3.0, -7.0],    # Corresponding penalties (negative)
+    'loss_margins': [-0.005, -0.01, -0.015, -0.02, -0.03, -0.05, -0.08, -0.10, -0.15],  # -0.5%, -1%, -1.5%, -2%, -3%, -5%, -8%, -10%, -15%
+    'loss_penalties': [-1.0, -3.0, -5.0, -8.0, -12.0, -18.0, -25.0, -35.0, -50.0],    # SIGNIFICANTLY ENHANCED loss penalties (negative)
     
     # === POSITION CLOSURE INCENTIVES ===
     'closure_bonus_threshold': 5,       # When to start giving closure bonuses
     'closure_bonus': 0.5,               # Bonus for closing when >threshold positions
+    'profitable_close_bonus': 1.0,      # EXTRA bonus for ANY profitable close (on top of profit rewards)
+    'losing_close_penalty': -2.0,       # EXTRA penalty for ANY losing close (on top of loss penalties)
     
     # === BASE ACTION REWARDS ===
     'hold_reward': 0.0,                 # Reward for holding (neutral)
     'open_reward': 0.1,                 # Small reward for taking action (opening)
-    'close_reward': 0.2,                # Slightly higher for closing (more decisive)
+    'close_reward': 0.3,                # ENHANCED reward for closing (more decisive action)
 }
 
 # Alternative configurations for different trading styles
 
-# Conservative Configuration (less risk-taking)
+# Conservative Configuration (less risk-taking but still rewards profitable closes and heavily penalizes losses)
 CONSERVATIVE_CONFIG = {
     **SIMPLE_REWARD_CONFIG,
     'max_comfortable_positions': 3,     # Fewer positions
     'max_positions_threshold': 6,       # Lower threshold
-    'position_penalty_multiplier': 1.0, # Higher penalties
-    'close_reward': 0.3,                # Higher closure reward
-    'closure_bonus': 0.8,               # Higher closure bonus
+    'position_penalty_multiplier': 1.0, # Higher penalties for excess positions
+    'close_reward': 0.4,                # Even higher closure reward for conservative approach
+    'closure_bonus': 1.0,               # Higher closure bonus
+    'profitable_close_bonus': 1.5,      # ENHANCED bonus for profitable closes in conservative mode
+    'losing_close_penalty': -3.0,       # EVEN HIGHER penalty for losing closes in conservative mode
 }
 
 # Aggressive Configuration (more risk-taking)
