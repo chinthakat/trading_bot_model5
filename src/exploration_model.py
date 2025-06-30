@@ -17,7 +17,6 @@ from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 from stable_baselines3.common.callbacks import BaseCallback, EvalCallback, CheckpointCallback
 from stable_baselines3.common.vec_env import DummyVecEnv
 from stable_baselines3.common.monitor import Monitor
-from stable_baselines3.common.evaluation import evaluate_policy
 import gymnasium as gym
 from pathlib import Path
 
@@ -354,72 +353,78 @@ class ExplorationTradingModel:
         self,
         eval_env: gym.Env,
         n_eval_episodes: int = 10,
-        deterministic: bool = True,
-        render: bool = False,
-        callback=None,
-        reward_threshold=None,
-        return_episode_rewards: bool = False,
-        warn: bool = True
-    ):
+        deterministic: bool = True
+    ) -> Dict[str, float]:
         """
-        Evaluate the exploration model using stable-baselines3 evaluation
+        Evaluate trained model with step-level reward capping
         
         Args:
-            eval_env: Environment to evaluate on
-            n_eval_episodes: Number of episodes to run
-            deterministic: Whether to use deterministic actions
-            render: Whether to render during evaluation
-            callback: Optional callback
-            reward_threshold: Optional reward threshold
-            return_episode_rewards: Whether to return episode rewards
-            warn: Whether to warn about evaluation
+            eval_env: Environment for evaluation
+            n_eval_episodes: Number of episodes to evaluate
+            deterministic: Use deterministic actions
             
         Returns:
-            Dictionary with evaluation metrics including mean_reward and std_reward
+            Dictionary of evaluation metrics
         """
         if self.model is None:
-            raise ValueError("Model not trained yet. Call train() first.")
+            raise ValueError("Model not trained yet")
         
-        self.logger.info(f"Evaluating model for {n_eval_episodes} episodes (deterministic={deterministic})")
+        if not hasattr(self, 'logger'):
+            self.logger = logging.getLogger(__name__)
+        
+        self.logger.info(f"Evaluating exploration model for {n_eval_episodes} episodes")
+        
+        episode_rewards = []
+        episode_stats = []
         
         try:
-            # Use stable-baselines3 evaluate_policy function
-            episode_rewards, episode_lengths = evaluate_policy(
-                model=self.model,
-                env=eval_env,
-                n_eval_episodes=n_eval_episodes,
-                deterministic=deterministic,
-                render=render,
-                callback=callback,
-                reward_threshold=reward_threshold,
-                return_episode_rewards=True,
-                warn=warn
-            )
+            for episode in range(n_eval_episodes):
+                obs, info = eval_env.reset()
+                episode_reward = 0
+                done = False
+                
+                while not done:
+                    action, _ = self.model.predict(obs, deterministic=deterministic)
+                    obs, reward, terminated, truncated, info = eval_env.step(action)
+                    
+                    # CRITICAL: Cap the step-level reward to prevent extreme values  
+                    # Adjusted to match the new reward scaling in environment
+                    reward = np.clip(reward, -5.0, 5.0)
+                    episode_reward += reward
+                    done = terminated or truncated
+
+                episode_rewards.append(episode_reward)
+                
+                # Collect episode statistics if available
+                if hasattr(eval_env, 'episode_stats'):
+                    episode_stats.append(eval_env.episode_stats.copy())
             
-            mean_reward = float(np.mean(episode_rewards))
-            std_reward = float(np.std(episode_rewards))
-            mean_length = float(np.mean(episode_lengths))
-            
-            eval_results = {
-                'mean_reward': mean_reward,
-                'std_reward': std_reward,
-                'mean_episode_length': mean_length,
-                'n_eval_episodes': n_eval_episodes,
-                'episode_rewards': episode_rewards.tolist() if hasattr(episode_rewards, 'tolist') else list(episode_rewards),
-                'episode_lengths': episode_lengths.tolist() if hasattr(episode_lengths, 'tolist') else list(episode_lengths)
+            # Calculate evaluation metrics
+            eval_metrics = {
+                'mean_reward': np.mean(episode_rewards),
+                'std_reward': np.std(episode_rewards),
+                'min_reward': np.min(episode_rewards),
+                'max_reward': np.max(episode_rewards),
+                'n_episodes': n_eval_episodes
             }
             
-            self.logger.info(f"Evaluation completed: Mean reward: {mean_reward:.4f} ± {std_reward:.4f}")
+            # Add trading-specific metrics if available
+            if episode_stats:
+                eval_metrics.update({
+                    'mean_return': np.mean([stats['total_return'] for stats in episode_stats]),
+                    'mean_sharpe': np.mean([stats['sharpe_ratio'] for stats in episode_stats]),
+                    'mean_max_dd': np.mean([stats['max_drawdown'] for stats in episode_stats]),
+                    'mean_win_rate': np.mean([stats['win_rate'] for stats in episode_stats]),
+                    'mean_trades': np.mean([stats['total_trades'] for stats in episode_stats])
+                })
             
-            if return_episode_rewards:
-                return eval_results
-            else:
-                return {'mean_reward': mean_reward, 'std_reward': std_reward}
-                
+            self.logger.info(f"Evaluation completed. Mean reward: {eval_metrics['mean_reward']:.2f}")
+            return eval_metrics
+            
         except Exception as e:
             self.logger.error(f"Evaluation failed: {e}")
             raise
-    
+
     def get_model_info(self) -> Dict[str, Any]:
         """Get exploration model information"""
         if self.model is None:

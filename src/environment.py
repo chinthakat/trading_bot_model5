@@ -617,6 +617,9 @@ class TradingEnvironment(gym.Env):
                 else:
                     self.logger.info(f"Total Reward: {total_reward:.1f}")
             
+            # Cap the total reward before scaling to prevent extreme values
+            total_reward = np.clip(total_reward, -500.0, 500.0)
+            
             # Scale reward to reasonable range for RL training
             # Use a more conservative scaling to avoid clipping
             scaled_reward = np.clip(total_reward / 100.0, -1.0, 1.0)
@@ -1102,10 +1105,16 @@ class TradingEnvironment(gym.Env):
         # Apply trade management rewards/penalties
         trade_management_reward = self._calculate_trade_management_reward(action_type, is_valid_action)
         if trade_management_reward != 0:
-            reward += trade_management_reward
+            # Scale trade management reward to match the main reward scaling
+            scaled_trade_management = trade_management_reward / 100.0
+            reward += scaled_trade_management
             if 'trade_management' not in reward_breakdown:
-                reward_breakdown['trade_management'] = trade_management_reward
-            
+                reward_breakdown['trade_management'] = scaled_trade_management
+        
+        # CRITICAL FIX: Cap the final total reward to prevent extreme values
+        # Use a much smaller cap since rewards are now properly scaled
+        reward = np.clip(reward, -5.0, 5.0)
+        
         # Log invalid actions with tracer for analysis
         if not is_valid_action and self.trade_tracer:
             self.trade_tracer.log_invalid_action(
@@ -1174,30 +1183,30 @@ class TradingEnvironment(gym.Env):
         
         # HOLD Action Penalties
         if action_type == 0:  # HOLD
-            # Penalize HOLD when at maximum capacity
+            # Penalize HOLD when at maximum capacity (with cap)
             if num_open_trades >= self.MAX_OPEN_TRADES:
-                hold_penalty = -5.0 - (self.steps_since_last_position * 0.1)  # Increasing penalty over time
+                hold_penalty = -5.0 - min(15.0, self.steps_since_last_position * 0.1)  # Cap at -20
                 reward += hold_penalty
                 self.logger.debug(f"HOLD penalty at max capacity: {hold_penalty:.2f} (steps since last position: {self.steps_since_last_position})")
             
-            # Penalize HOLD when no open positions (should be looking for trading opportunities)
+            # Penalize HOLD when no open positions (with cap)
             elif num_open_trades == 0:
-                no_position_penalty = -2.0 - (self.steps_since_last_position * 0.05)  # Escalating penalty for idle behavior
+                no_position_penalty = -2.0 - min(8.0, self.steps_since_last_position * 0.05)  # Cap at -10
                 reward += no_position_penalty
                 self.logger.debug(f"HOLD penalty (no positions): {no_position_penalty:.2f} (steps since last position: {self.steps_since_last_position})")
             
-            # Heavily discourage HOLD after 100+ steps without opening positions
+            # Heavily discourage HOLD after 100+ steps without opening positions (but cap the penalty)
             elif self.steps_since_last_position > 100:
-                inactivity_penalty = -10.0 - (self.steps_since_last_position - 100) * 0.2  # Escalating penalty
+                inactivity_penalty = -10.0 - min(50.0, (self.steps_since_last_position - 100) * 0.2)  # Escalating penalty with cap at -60
                 reward += inactivity_penalty
                 self.logger.info(f"High inactivity penalty: {inactivity_penalty:.2f} (steps since last position: {self.steps_since_last_position})")
         
         # BUY (LONG) Action Rewards/Penalties
         elif action_type == 1:  # BUY (LONG)
             if is_valid_action:
-                # Decrease reward for opening LONG when already have many LONGs
+                # Decrease reward for opening LONG when already have many LONGs (with cap)
                 if long_positions > 5:
-                    long_penalty = -2.0 * (long_positions - 5)  # Escalating penalty
+                    long_penalty = -2.0 * min(10, long_positions - 5)  # Cap at -20 (max 10 excess positions)
                     reward += long_penalty
                     self.logger.debug(f"LONG oversaturation penalty: {long_penalty:.2f} (LONG positions: {long_positions})")
             else:
@@ -1215,9 +1224,9 @@ class TradingEnvironment(gym.Env):
         # SELL (SHORT) Action Rewards/Penalties  
         elif action_type == 2:  # SELL (SHORT)
             if is_valid_action:
-                # Decrease reward for opening SHORT when already have many SHORTs
+                # Decrease reward for opening SHORT when already have many SHORTs (with cap)
                 if short_positions > 5:
-                    short_penalty = -2.0 * (short_positions - 5)  # Escalating penalty
+                    short_penalty = -2.0 * min(10, short_positions - 5)  # Cap at -20 (max 10 excess positions)
                     reward += short_penalty
                     self.logger.debug(f"SHORT oversaturation penalty: {short_penalty:.2f} (SHORT positions: {short_positions})")
             else:
@@ -1243,19 +1252,23 @@ class TradingEnvironment(gym.Env):
                 reward += bonus
                 self.logger.info(f"Trade close bonus: {bonus:.2f} (trades: {num_open_trades}/{self.MAX_OPEN_TRADES})")
             elif not is_valid_action:  # Invalid CLOSE_ALL (no trades to close)
-                # Heavy penalty for trying to close when no trades are open
+                # Heavy penalty for trying to close when no trades are open (but cap it)
                 base_penalty = -10.0
-                # Escalating penalty for consecutive invalid attempts
-                consecutive_penalty = self.consecutive_invalid_close_attempts * -5.0
-                total_penalty = base_penalty + consecutive_penalty
+                # Escalating penalty for consecutive invalid attempts (capped)
+                consecutive_penalty = min(25.0, self.consecutive_invalid_close_attempts * 5.0)  # Cap at -25
+                total_penalty = base_penalty - consecutive_penalty  # Make it negative
                 reward += total_penalty
                 self.logger.warning(f"Invalid CLOSE_ALL penalty: {total_penalty:.2f} (base: {base_penalty:.2f}, consecutive: {self.consecutive_invalid_close_attempts}x attempts)")
                 
-                # Extra severe penalty for excessive consecutive attempts
+                # Extra severe penalty for excessive consecutive attempts (capped)
                 if self.consecutive_invalid_close_attempts >= 5:
-                    severe_penalty = -20.0 - (self.consecutive_invalid_close_attempts - 5) * -3.0
+                    severe_penalty = -20.0  # Fixed severe penalty instead of growing
                     reward += severe_penalty
                     self.logger.error(f"SEVERE invalid CLOSE_ALL penalty: {severe_penalty:.2f} (consecutive attempts: {self.consecutive_invalid_close_attempts})")
+        
+        # Cap the total trade management reward to prevent extreme values
+        # Use smaller cap since these will be scaled down by /100 later
+        reward = np.clip(reward, -50.0, 50.0)
         
         return reward
 

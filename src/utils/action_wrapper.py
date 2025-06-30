@@ -33,7 +33,11 @@ class TrulyDiscreteActionWrapper(gym.Wrapper):
         
     def action(self, action):
         """Convert discrete action to continuous action for original environment"""
-        # action is an integer from 0 to 3
+        # Ensure action is a scalar integer (handle both numpy arrays and scalars)
+        if isinstance(action, np.ndarray):
+            action = int(action.item())  # Extract scalar from numpy array
+        else:
+            action = int(action)  # Ensure it's an integer
         
         # Map to continuous action format [action_type, size_index, leverage]
         continuous_action = np.array([
@@ -46,6 +50,12 @@ class TrulyDiscreteActionWrapper(gym.Wrapper):
     
     def step(self, action):
         """Take a step with the discrete action"""
+        # Ensure action is a scalar integer (handle both numpy arrays and scalars)
+        if isinstance(action, np.ndarray):
+            action = int(action.item())  # Extract scalar from numpy array
+        else:
+            action = int(action)  # Ensure it's an integer
+        
         # Convert discrete action to continuous
         continuous_action = self.action(action)
         

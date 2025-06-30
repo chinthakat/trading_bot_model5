@@ -519,9 +519,13 @@ class TradingModel:
                 while not done:
                     action, _ = self.model.predict(obs, deterministic=deterministic)
                     obs, reward, terminated, truncated, info = eval_env.step(action)
+                    
+                    # Cap the step-level reward to prevent extreme values
+                    # Adjusted to match the new reward scaling in environment
+                    reward = np.clip(reward, -5.0, 5.0)
                     episode_reward += reward
                     done = terminated or truncated
-                
+
                 episode_rewards.append(episode_reward)
                 
                 # Collect episode statistics if available
