@@ -1,4 +1,7 @@
-# Simple Reward System Documentation
+# Simple Reward System
+
+> Reference for `src/simple_reward_system.py` and the profiles in
+> `src/reward_config.py`.
 
 ## Overview
 

@@ -1,4 +1,9 @@
-# Enhanced Interactive Training Script
+# Interactive Training
+
+> How `src/train_memory_efficient.py` behaves in interactive mode. Run the
+> commands below from the repository root. Note that the training script does
+> not currently run from a fresh clone - see the Status section of the
+> [main README](../README.md) for why.
 
 ## Overview
 The `train_memory_efficient.py` script has been enhanced with comprehensive interactive capabilities and detailed logging features.

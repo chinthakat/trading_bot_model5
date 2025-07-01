@@ -5,7 +5,7 @@ Quick test script to verify enhanced logging with market timestamps and reward b
 
 import sys
 from pathlib import Path
-sys.path.append(str(Path(__file__).parent / "src"))
+sys.path.append(str(Path(__file__).parent.parent / "src"))
 
 from environment import TradingEnvironment
 from simple_reward_system import SimpleRewardSystem

@@ -5,7 +5,7 @@ Test script to verify that the Enhanced Live Trade Visualizer logs data properly
 
 import sys
 from pathlib import Path
-sys.path.append('GRAPH_GEN')
+sys.path.append(str(Path(__file__).parent.parent / "GRAPH_GEN"))
 
 from live_trade_visualizer_enhanced import EnhancedLiveTradeVisualizer
 

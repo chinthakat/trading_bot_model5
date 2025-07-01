@@ -1,5 +1,9 @@
 # Trade Trace Analysis - Output Files Summary
 
+> Column reference for the CSVs that `TRADE_ANALYSIS/trade_trace_analyzer.py`
+> writes. Run the commands below from inside `TRADE_ANALYSIS/`. None of the
+> output files are tracked in git.
+
 ## Overview
 The trade trace analyzer now generates **two CSV output files** for comprehensive trade analysis:
 

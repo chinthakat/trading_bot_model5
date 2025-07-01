@@ -1,5 +1,9 @@
 # CUSTOM_1 Dataset Documentation
 
+> Reference for the `CUSTOM_1` market type of `DATA_GEN/btc_data_generator.py`.
+> The dataset itself is not in the repository - regenerate it with the command
+> at the bottom of this page, run from the repository root.
+
 ## Overview
 The CUSTOM_1 dataset generates a comprehensive 12-month Bitcoin price dataset specifically designed for reinforcement learning model training. It provides diverse market conditions with clear patterns for optimal learning.
 
@@ -108,7 +112,7 @@ The CUSTOM_1 dataset generates a comprehensive 12-month Bitcoin price dataset sp
 
 ### Generate Dataset
 ```bash
-python btc_data_generator.py \
+python DATA_GEN/btc_data_generator.py \
     --start-date 2024-01-01 \
     --end-date 2024-12-31 \
     --interval 15m \
