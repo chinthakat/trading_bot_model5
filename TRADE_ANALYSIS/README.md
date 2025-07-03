@@ -1,6 +1,15 @@
-# Trade Analysis Results
+# Trade Analysis
 
-This directory contains comprehensive analysis of trade traces with all requested information.
+Turns the JSONL trade traces written by `src/utils/trade_tracer.py` during a
+training run into analysis CSVs.
+
+> **What is actually in this directory.** Only the three scripts below are
+> tracked in git. Every CSV named on this page - `trade_analysis_detailed.csv`,
+> `trade_analysis_simplified.csv`, `performance_metrics.csv`,
+> `episode_summary.csv` - is a generated output, is gitignored, and is not in
+> the repository. Run `trade_trace_analyzer.py` against your own traces to
+> produce them. The column layout of each file is described in
+> [../docs/trade-analysis-outputs.md](../docs/trade-analysis-outputs.md).
 
 ## Generated Files
 
@@ -45,6 +54,10 @@ Summary statistics grouped by episode
 
 ## Key Statistics
 
+These numbers describe one past training run, kept here as a record of what the
+output looks like. They are not a benchmark and were not reproduced. The run
+lost money.
+
 - **Total Trades**: 5,609
 - **Win Rate**: 37.8%
 - **Total PnL**: -$977.18
@@ -71,6 +84,11 @@ Creates readable summary and simplified CSV file
 python create_summary.py
 ```
 
+#### `check_rewards.py`
+A one-off script that prints reward statistics. It reads a hard-coded
+`trade_analysis_detailed_minimal.csv` from the current directory and takes no
+arguments.
+
 ## Data Fields Extracted
 
 ✅ **All Requested Fields Included:**
@@ -84,6 +102,8 @@ python create_summary.py
 7. **Entry/Close Net Worth**: `entry_net_worth`, `close_net_worth`
 
 ## Additional Insights
+
+From the same past run as the statistics above.
 
 - **Best Trade**: $9.00 profit (TRADE_05431)
 - **Worst Trade**: -$15.18 loss (TRADE_05430)

@@ -1,6 +1,10 @@
 # Bitcoin Synthetic Data Generator
 
-A Python script to generate synthetic Bitcoin price data similar to Binance format with different market conditions.
+A Python script to generate synthetic Bitcoin price data in Binance CSV format
+under different market conditions. Run every command below from the repository
+root; output paths are relative to wherever you run from.
+The `CUSTOM_1` market type is documented separately in
+[../docs/custom-1-dataset.md](../docs/custom-1-dataset.md).
 
 ## Features
 
@@ -9,6 +13,7 @@ A Python script to generate synthetic Bitcoin price data similar to Binance form
   - `DOWNTREND`: Bearish market with consistent downward price movement  
   - `SWING`: Sideways/ranging market with oscillating prices
   - `MIXED`: Combination of all patterns with changing market conditions
+  - `CUSTOM_1`: Scripted twelve-month, eight-phase curriculum dataset
 
 - **Multiple Timeframes**: 1m, 5m, 15m intervals
 - **Realistic OHLCV Data**: Generates Open, High, Low, Close, Volume, and Timestamp data
@@ -17,29 +22,32 @@ A Python script to generate synthetic Bitcoin price data similar to Binance form
 ## Installation
 
 ```bash
-pip install -r requirements.txt
+pip install -r DATA_GEN/requirements.txt
 ```
+
+That covers this tool only (pandas and numpy). The repository-wide
+`requirements.txt` at the root is a superset.
 
 ## Usage
 
 ### Command Line Interface
 
 ```bash
-python src/btc_data_generator.py --start-date 2024-01-01 --end-date 2024-02-01 --interval 15m --market-type UPTREND --output data/uptrend_data.csv
+python DATA_GEN/btc_data_generator.py --start-date 2024-01-01 --end-date 2024-02-01 --interval 15m --market-type UPTREND --output data/uptrend_data.csv
 ```
 
 #### Parameters:
 - `--start-date`: Start date in YYYY-MM-DD format
 - `--end-date`: End date in YYYY-MM-DD format  
 - `--interval`: Time interval (1m, 5m, 15m)
-- `--market-type`: Market condition (UPTREND, DOWNTREND, SWING, MIXED)
+- `--market-type`: Market condition (UPTREND, DOWNTREND, SWING, MIXED, CUSTOM_1)
 - `--initial-price`: Starting BTC price (default: 50000.0)
 - `--output`: Output CSV file path (optional)
 
 ### Programmatic Usage
 
 ```python
-from src.btc_data_generator import BTCDataGenerator
+from DATA_GEN.btc_data_generator import BTCDataGenerator
 
 generator = BTCDataGenerator(initial_price=45000.0)
 
@@ -57,17 +65,17 @@ data = generator.generate_timeframe_data(
 
 ### Generate 1 week of bullish 15m data:
 ```bash
-python src/btc_data_generator.py --start-date 2024-06-01 --end-date 2024-06-08 --interval 15m --market-type UPTREND
+python DATA_GEN/btc_data_generator.py --start-date 2024-06-01 --end-date 2024-06-08 --interval 15m --market-type UPTREND
 ```
 
 ### Generate 1 month of mixed market 5m data:
 ```bash
-python src/btc_data_generator.py --start-date 2024-01-01 --end-date 2024-02-01 --interval 5m --market-type MIXED
+python DATA_GEN/btc_data_generator.py --start-date 2024-01-01 --end-date 2024-02-01 --interval 5m --market-type MIXED
 ```
 
 ### Run example script:
 ```bash
-python src/example_generator.py
+python DATA_GEN/example_generator.py
 ```
 
 ## Output Format
@@ -93,25 +101,23 @@ Use the included analyzer to examine generated datasets:
 
 ```bash
 # Analyze a single file
-python src/data_analyzer.py data/your_data.csv
+python DATA_GEN/data_analyzer.py data/your_data.csv
 
 # Compare multiple files
-python src/data_analyzer.py data/file1.csv data/file2.csv
+python DATA_GEN/data_analyzer.py data/file1.csv data/file2.csv
 
 # Quick comparison summary
-python src/data_analyzer.py data/*.csv --summary
+python DATA_GEN/data_analyzer.py data/*.csv --summary
 ```
 
 ## Batch Generation
 
-For Windows users, use the included batch scripts:
-
-```bash
-# Generate multiple datasets at once
-.\generate_datasets.bat
-# or
-.\generate_datasets.ps1
-```
+`generate_datasets.bat` and `generate_datasets.ps1` generate a spread of
+datasets in one go. Both were written to be run from the repository root and
+both invoke `python src/btc_data_generator.py`, which is an empty file in this
+repository - so they do not work as committed. Point them at
+`DATA_GEN/btc_data_generator.py` first, or copy the individual commands out of
+them.
 
 ## Data Quality
 
@@ -124,14 +130,16 @@ The generator creates realistic market data with:
 ## Files Structure
 
 ```
-c:\Projects\Model5\
-├── src/
-│   ├── btc_data_generator.py    # Main generator script
-│   ├── data_analyzer.py         # Data analysis tool
-│   └── example_generator.py     # Usage examples
-├── data/                        # Generated CSV files
-├── generate_datasets.bat        # Windows batch script
-├── generate_datasets.ps1        # PowerShell script
-├── requirements.txt             # Python dependencies
-└── README.md                    # This file
+DATA_GEN/
+├── btc_data_generator.py    # Main generator script
+├── data_analyzer.py         # Data analysis tool
+├── example_generator.py     # Usage examples
+├── analyze_custom1.py       # One-off check on a generated CUSTOM_1 dataset
+├── generate_datasets.bat    # Windows batch script
+├── generate_datasets.ps1    # PowerShell script
+├── requirements.txt         # Dependencies for this tool only
+└── README.md                # This file
 ```
+
+Generated CSVs are written to `../data/`, which is gitignored and not part of
+the repository.

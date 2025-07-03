@@ -1,6 +1,16 @@
 # Bitcoin Price Graph Generator
 
-Interactive tool to visualize Bitcoin price data from CSV files with multiple chart types and analysis options.
+Tools to visualize Bitcoin price data from CSV files, and to draw trade entries,
+exits and P&L on top of a price series. Run the commands below from inside
+`GRAPH_GEN/`.
+
+> **Which file to run.** `btc_graph_generator.py` is an empty file in this
+> repository - it was committed as a placeholder and never filled in, so every
+> command that names it, and the helpers `launcher.py`, `example_usage.py`,
+> `debug_import.py`, `test_interactive.py` and `summary.py` that import
+> `BTCGraphGenerator` from it, will not work. Use `btc_graph_generator_fixed.py`
+> (the full generator) or `btc_graph_simple.py` (price and volume only)
+> instead. Both take the same `--file` / `--interactive` flags described below.
 
 ## Features
 
@@ -20,37 +30,64 @@ cd GRAPH_GEN
 pip install -r requirements.txt
 ```
 
+That covers this tool only. The repository-wide `requirements.txt` at the root
+is a superset.
+
 ## Usage
 
-### Interactive Mode (Recommended)
+### Interactive Mode
 
-#### Windows:
 ```bash
-launch_graph_generator.bat
+python btc_graph_generator_fixed.py --interactive
 ```
 
-#### Command Line:
-```bash
-python btc_graph_generator.py --interactive
-```
-
-#### Simple Launcher:
-```bash
-python launcher.py
-```
+`launch_graph_generator.bat` and `launcher.py` both target the empty
+`btc_graph_generator.py` and do not work as committed.
 
 ### Command Line Mode
 
 ```bash
 # Single file graph
-python btc_graph_generator.py --file "your_data.csv"
+python btc_graph_generator_fixed.py --file "your_data.csv"
 
 # Advanced analysis
-python btc_graph_generator.py --file "your_data.csv" --type advanced
+python btc_graph_generator_fixed.py --file "your_data.csv" --type advanced
 
 # Save graph
-python btc_graph_generator.py --file "your_data.csv" --save "output.png"
+python btc_graph_generator_fixed.py --file "your_data.csv" --save "output.png"
+
+# Price and volume only, no technical panels
+python btc_graph_simple.py --file "your_data.csv"
 ```
+
+`--data-folder` defaults to `../data`, so `--file` is resolved relative to the
+repository's gitignored `data/` directory unless you pass an explicit path.
+
+### Trade visualizers
+
+These read the JSONL trade traces written during training, or the CSVs produced
+by `TRADE_ANALYSIS/`, and draw entry/exit markers with P&L labels.
+
+```bash
+# entry/exit markers over a price series
+python trade_analysis_visualizer_clean.py --trace-file ../logs/trade_traces/trade_traces.jsonl                                           --save trade_analysis.png
+
+# same idea, driven from analysis CSVs instead of traces
+python csv_trade_visualizer.py --trade-csv ../TRADE_ANALYSIS/trade_analysis_detailed.csv                                --market-csv ../data/your_data.csv
+
+# chart that follows a run as it happens
+python live_trade_visualizer_enhanced.py --file <trade log csv> --interval 5
+
+# pull trade and market rows out of a trace file
+python extract_trade_data.py --trace-file ../logs/trade_traces/trade_traces.jsonl
+```
+
+There are four near-identical trade visualizers: `trade_analysis_visualizer.py`
+and its `_clean`, `_fixed` and `_pure` variants. Use `_clean`. The unsuffixed
+`trade_analysis_visualizer.py` is corrupted - from line 245 onward the file is a
+single line of literal `
+` escape sequences - and raises `SyntaxError` when
+imported or run.
 
 ## Interactive Menu Options
 
@@ -94,17 +131,21 @@ Supports CSV files with the following columns:
 - **File Export**: Optional PNG export with 300 DPI quality
 - **Graphs Folder**: Saved files organized in `graphs/` subdirectory
 
+No generated PNGs are tracked in git - `graphs/`, `example_graphs/` and loose
+`trade_analysis_*.png` files are all gitignored. Regenerate them with the
+commands above.
+
 ## Examples
 
 ```bash
 # Launch interactive mode
-python btc_graph_generator.py --interactive
+python btc_graph_generator_fixed.py --interactive
 
 # Quick single file
-python btc_graph_generator.py --file "BTC_SYNTHETIC_UPTREND_15m_2024-06-01_to_2024-06-03.csv"
+python btc_graph_generator_fixed.py --file "BTC_SYNTHETIC_UPTREND_15m_2024-06-01_to_2024-06-03.csv"
 
 # Advanced analysis with save
-python btc_graph_generator.py --file "my_data.csv" --type advanced --save "analysis.png"
+python btc_graph_generator_fixed.py --file "my_data.csv" --type advanced --save "analysis.png"
 ```
 
 ## Dependencies

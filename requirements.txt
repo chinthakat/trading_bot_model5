@@ -1,0 +1,19 @@
+# Assembled from the third-party imports in this repository.
+# Versions are floors, not a verified lockfile - see README "Requirements".
+
+# RL environment and agent
+gymnasium>=0.28
+stable-baselines3>=2.0        # 2.x is required for the Gymnasium 5-tuple step API
+torch>=2.0
+
+# Data handling
+numpy>=1.20.0
+pandas>=1.5.0
+
+# Charts (DATA_GEN / GRAPH_GEN / TRADE_ANALYSIS)
+matplotlib>=3.5.0
+seaborn>=0.11.0
+
+# Runtime support
+python-dotenv>=1.0.0          # imported as `dotenv`
+psutil>=5.9.0                 # memory reporting during training
