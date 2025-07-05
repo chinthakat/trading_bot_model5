@@ -7,8 +7,6 @@ A simplified reward system that focuses on:
 3. Multi-level rewards/penalties for profit/loss based on margin
 4. Encouraging position closure when >5 open positions
 
-Author: AI Assistant
-Date: June 25, 2025
 """
 
 import numpy as np

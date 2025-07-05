@@ -4,8 +4,6 @@ Configuration file for Simple Reward System
 This file contains configurable parameters for the reward system.
 Modify these values to tune the behavior of the trading agent.
 
-Author: AI Assistant
-Date: June 25, 2025
 """
 
 # Simple Reward System Configuration
