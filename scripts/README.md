@@ -15,8 +15,11 @@ Run one from the repository root:
 python scripts/test_exploration_model.py
 ```
 
-Each script adds `../src` to `sys.path` itself, so no installation step is
-needed beyond the dependencies in `requirements.txt`.
+Most of these scripts add `../src` to `sys.path` themselves, so no installation
+step is needed beyond the dependencies in `requirements.txt`. Two are
+exceptions: `test_visualization_logging.py` adds `../GRAPH_GEN` instead, because
+that is where the module it exercises lives, and `analyze_csv.py` does not touch
+`sys.path` at all - it imports nothing from `src/` and only needs pandas.
 
 | Script | What it prints |
 | --- | --- |

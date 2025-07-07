@@ -70,24 +70,43 @@ by `TRADE_ANALYSIS/`, and draw entry/exit markers with P&L labels.
 
 ```bash
 # entry/exit markers over a price series
-python trade_analysis_visualizer_clean.py --trace-file ../logs/trade_traces/trade_traces.jsonl                                           --save trade_analysis.png
+python trade_analysis_visualizer_clean.py --trace-file ../logs/trade_traces/trade_traces.jsonl \
+                                          --save trade_analysis.png
 
 # same idea, driven from analysis CSVs instead of traces
-python csv_trade_visualizer.py --trade-csv ../TRADE_ANALYSIS/trade_analysis_detailed.csv                                --market-csv ../data/your_data.csv
+python csv_trade_visualizer.py --trade-csv ../TRADE_ANALYSIS/trade_analysis_detailed.csv \
+                               --external-market-csv ../data/your_data.csv
 
 # chart that follows a run as it happens
-python live_trade_visualizer_enhanced.py --file <trade log csv> --interval 5
+python live_trade_visualizer_enhanced.py --file ../logs/trade_traces/trade_traces.jsonl \
+                                         --interval 5
 
 # pull trade and market rows out of a trace file
 python extract_trade_data.py --trace-file ../logs/trade_traces/trade_traces.jsonl
 ```
 
+Note the path and flag details:
+
+- `--trace-file` must be passed explicitly. These scripts default it to the
+  relative `logs/trade_traces/trade_traces.jsonl`, which from inside
+  `GRAPH_GEN/` points at `GRAPH_GEN/logs/...`; training writes to `logs/` at the
+  repository root.
+- `csv_trade_visualizer.py` takes market data through either of two flags, and
+  they expect different files. `--market-csv` is for `extracted_market_data.csv`
+  produced by `extract_trade_data.py`, which carries a `datetime` column.
+  A raw OHLCV file - anything out of `DATA_GEN/`, or a downloaded Binance
+  export - has `timestamp` instead and must be passed to
+  `--external-market-csv`, which converts the Unix seconds itself. The wrong
+  pairing fails with `KeyError: 'datetime'`.
+- `live_trade_visualizer_enhanced.py --file` wants the **JSONL trace file**,
+  not a CSV. Every line is parsed with `json.loads`, so a CSV produces a JSON
+  decode failure on the first row.
+
 There are four near-identical trade visualizers: `trade_analysis_visualizer.py`
 and its `_clean`, `_fixed` and `_pure` variants. Use `_clean`. The unsuffixed
 `trade_analysis_visualizer.py` is corrupted - from line 245 onward the file is a
-single line of literal `
-` escape sequences - and raises `SyntaxError` when
-imported or run.
+single line of literal `\n` escape sequences - and raises
+`SyntaxError` when imported or run.
 
 ## Interactive Menu Options
 

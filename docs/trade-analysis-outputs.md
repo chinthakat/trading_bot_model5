@@ -3,6 +3,10 @@
 > Column reference for the CSVs that `TRADE_ANALYSIS/trade_trace_analyzer.py`
 > writes. Run the commands below from inside `TRADE_ANALYSIS/`. None of the
 > output files are tracked in git.
+>
+> `--trace-file` has no usable default: it falls back to the absolute path
+> `c:\Projects\Model5\logs\trade_traces\trade_traces.jsonl` from the original
+> author's machine, so always pass it explicitly.
 
 ## Overview
 The trade trace analyzer now generates **two CSV output files** for comprehensive trade analysis:
@@ -14,7 +18,8 @@ The trade trace analyzer now generates **two CSV output files** for comprehensiv
 
 ### Standard Mode
 ```bash
-python trade_trace_analyzer.py --output trade_analysis_standalone.csv
+python trade_trace_analyzer.py --trace-file ../logs/trade_traces/trade_traces.jsonl \
+                               --output trade_analysis_standalone.csv
 ```
 **Output:**
 - `trade_analysis_standalone.csv` (detailed - 51 columns)
@@ -22,7 +27,8 @@ python trade_trace_analyzer.py --output trade_analysis_standalone.csv
 
 ### Detailed Report Mode
 ```bash
-python trade_trace_analyzer.py --detailed --output-dir .
+python trade_trace_analyzer.py --trace-file ../logs/trade_traces/trade_traces.jsonl \
+                               --detailed --output-dir .
 ```
 **Output:**
 - `trade_analysis_detailed.csv` (detailed - 51 columns) 

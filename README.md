@@ -101,13 +101,21 @@ of small position sizes. `src/utils/action_wrapper.py` provides
 exploring SELL and CLOSE_ALL when the action head was continuous.
 
 **The reward** comes from `src/simple_reward_system.py`, tuned by
-`src/reward_config.py`. It is deliberately shaped rather than pure P&L: an
-exploration bonus for using actions that have not appeared in the last 20 steps,
-escalating penalties once more than 5 (and then 10) trades are open at once,
-tiered rewards and penalties at 1/3/5/10% profit and loss, and a bonus for
-closing when the book is crowded. `reward_config.py` also ships
-`CONSERVATIVE_CONFIG` and `AGGRESSIVE_CONFIG` variants. Details are in
-[docs/reward-system.md](docs/reward-system.md).
+`src/reward_config.py`. It is deliberately shaped rather than pure P&L:
+
+- An exploration bonus scaled by how rare the action is in the last 20 steps -
+  `exploration_bonus * (1 - action_count / window)`. Every action collects some
+  bonus unless it was used on all 20 of the preceding steps.
+- Position-count shaping in two bands. Above 5 open trades there is no flat
+  penalty: CLOSE actions earn `+0.2` per excess trade and OPEN actions pay only
+  `-0.1` per excess trade. The escalating `-0.5 * excess**2` penalty applies
+  only above 10 open trades, and it replaces the 5-trade band rather than
+  stacking with it.
+- Tiered rewards and penalties at 1/3/5/10% profit and loss, and a flat bonus
+  for closing while more than 5 trades are open.
+
+`reward_config.py` also ships `CONSERVATIVE_CONFIG` and `AGGRESSIVE_CONFIG`
+variants. Details are in [docs/reward-system.md](docs/reward-system.md).
 
 **The agent** is Stable-Baselines3 PPO with a custom features extractor.
 `src/model.py` is the plain version; `src/exploration_model.py` adds a higher
@@ -269,12 +277,19 @@ Turns the JSONL traces written during training into CSVs:
 
 ```bash
 cd TRADE_ANALYSIS
-python trade_trace_analyzer.py --detailed --output-dir .
+python trade_trace_analyzer.py --trace-file ../logs/trade_traces/trade_traces.jsonl \
+                               --detailed --output-dir .
 python create_summary.py
 ```
 
-`trade_trace_analyzer.py` also takes `--trace-file` and `--output`. The columns
-of each output file are described in
+**`--trace-file` is not optional in practice.** Its default is the absolute path
+`c:\Projects\Model5\logs\trade_traces\trade_traces.jsonl`, left over from the
+original author's machine, so omitting the flag fails with a `FileNotFoundError`
+naming a directory that does not exist on your system. See
+[Known problems](#known-problems).
+
+`trade_trace_analyzer.py` also takes `--output`. The columns of each output file
+are described in
 [docs/trade-analysis-outputs.md](docs/trade-analysis-outputs.md).
 
 ### Charts
@@ -289,16 +304,33 @@ python btc_graph_simple.py --file ../data/uptrend_15m.csv
 python btc_graph_generator_fixed.py --file ../data/uptrend_15m.csv --type advanced --save chart.png
 
 # entry/exit markers and P&L over a price series
-python trade_analysis_visualizer_clean.py --save trade_analysis.png
+python trade_analysis_visualizer_clean.py --trace-file ../logs/trade_traces/trade_traces.jsonl \
+                                          --save trade_analysis.png
 python csv_trade_visualizer.py --trade-csv ../TRADE_ANALYSIS/trade_analysis_detailed.csv \
-                               --market-csv ../data/uptrend_15m.csv
+                               --external-market-csv ../data/uptrend_15m.csv
 
 # live chart that follows a training run
-python live_trade_visualizer_enhanced.py --file <trade log csv> --interval 5
+python live_trade_visualizer_enhanced.py --file ../logs/trade_traces/trade_traces.jsonl \
+                                         --interval 5
 ```
 
 `btc_graph_generator_fixed.py --type` accepts `single`, `advanced` and
 `comparison`, and `--interactive` gives a menu-driven file picker.
+
+Three flag details are easy to get wrong:
+
+- `trade_analysis_visualizer_clean.py` defaults `--trace-file` to the *relative*
+  `logs/trade_traces/trade_traces.jsonl`, which from inside `GRAPH_GEN/`
+  resolves to `GRAPH_GEN/logs/...`. Training writes its traces to `logs/` at the
+  repository root, so pass the `../` path shown above.
+- `csv_trade_visualizer.py` has two market-data flags and they are not
+  interchangeable. `--market-csv` expects `extracted_market_data.csv` from
+  `extract_trade_data.py`, which has a `datetime` column. A raw OHLCV file from
+  `DATA_GEN/` has `timestamp` and no `datetime`, so it must go to
+  `--external-market-csv`, which converts the Unix timestamps itself. Passing an
+  OHLCV file to `--market-csv` fails with `KeyError: 'datetime'`.
+- `live_trade_visualizer_enhanced.py --file` reads **JSONL traces**, not a CSV,
+  despite the generic flag name; each line is parsed with `json.loads`.
 
 Note that `GRAPH_GEN/` contains four near-duplicate trade visualizers
 (`trade_analysis_visualizer.py` and its `_clean`, `_fixed` and `_pure`
@@ -316,6 +348,7 @@ corrupted and does not parse - see [Known problems](#known-problems).
 │   ├── exploration_model.py  PPO variant tuned for action exploration
 │   ├── simple_reward_system.py / reward_config.py  Shaped reward and its profiles
 │   ├── financial_calculations.py  P&L, net worth, liquidation price, sizing
+│   ├── data_analyzer.py      Unused byte-identical copy of DATA_GEN/data_analyzer.py
 │   ├── training/data_manager.py   CoinAPI download and validation (imports are broken)
 │   └── utils/                Trade logger, JSONL tracer, liquidation tracker,
 │                             action wrapper, config loader, run archiver
@@ -335,9 +368,21 @@ Directories the code writes to at runtime - `data/`, `logs/`, `models/`,
 ## Tests
 
 There are none. Nothing in the repository imports `pytest`, and none of the
-`test_*.py` files contain an `assert`; they are print-and-eyeball scripts. They
-now live in [`scripts/`](scripts/README.md) with a description of what each one
-prints. Running `pytest` against this repository will collect nothing useful.
+`test_*.py` files contain an `assert`; they are print-and-eyeball scripts.
+
+Most of them now live in [`scripts/`](scripts/README.md), with a description of
+what each one prints. Two more were left where they were, because they exercise
+`src/` internals directly: `src/test_comprehensive_logging.py` drives the trade
+logger and tracer end to end, and `src/test_integration.py` builds an
+environment and steps it to check the logging wiring. Both print and neither
+asserts.
+
+Twelve tracked files match `test_*.py` - nine in `scripts/`, the two in `src/`,
+and `GRAPH_GEN/test_interactive.py`, which is a manual probe for the empty
+`btc_graph_generator.py`. Pointing `pytest` at the repository root collects all
+twelve, runs their module-level code as a side effect of import, and reports no
+meaningful pass/fail signal from any of them. Run the ones you want
+individually with `python` instead.
 
 ## Known problems
 
@@ -355,8 +400,19 @@ Recorded rather than fixed, since the project is not being developed further.
   `test_interactive.py` and `summary.py` all refer to
   `btc_graph_generator.BTCGraphGenerator`, which does not exist because that
   file is empty.
+- Several scripts still carry the original author's absolute Windows paths under
+  `c:\Projects\Model5\`. `TRADE_ANALYSIS/trade_trace_analyzer.py` line 499 uses
+  one as the default for `--trace-file`, so the analyzer must always be given an
+  explicit `--trace-file`. `GRAPH_GEN/trade_analysis_visualizer_fixed.py` hard-codes
+  three more at lines 343, 344 and 355 - its trace file, market CSV and output
+  PNG - with no flags to override them, so that variant has to be edited before
+  it will run. Use `trade_analysis_visualizer_clean.py`, which takes the paths
+  as arguments.
 - `TRADE_ANALYSIS/check_rewards.py` and `DATA_GEN/analyze_custom1.py` read
   hard-coded relative paths to CSVs that are not in the repository.
+- `src/data_analyzer.py` and `DATA_GEN/data_analyzer.py` are byte-for-byte
+  identical. Only the `DATA_GEN/` copy is referenced by any documentation or
+  tooling; the one in `src/` is an unused duplicate.
 - `src/utils/liquidation_tracker.py` is handed an unsigned `size_btc` with no
   side (`environment.py` lines 1301 and 1339), and its
   `calculate_unrealized_pnl()` applies the long formula `(price - entry) * size`

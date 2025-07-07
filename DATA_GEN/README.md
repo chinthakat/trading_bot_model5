@@ -74,8 +74,15 @@ python DATA_GEN/btc_data_generator.py --start-date 2024-01-01 --end-date 2024-02
 ```
 
 ### Run example script:
+
+This one is the exception to the "run from the repository root" rule above.
+`example_generator.py` hard-codes its four output paths as `../data/...`, so it
+has to be run from inside `DATA_GEN/` for them to land in the repository's
+`data/` directory. Run from the root, it writes to the parent of the repository.
+
 ```bash
-python DATA_GEN/example_generator.py
+cd DATA_GEN
+python example_generator.py
 ```
 
 ## Output Format

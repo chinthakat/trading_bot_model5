@@ -75,8 +75,13 @@ Main analysis script that extracts all data from trade traces
 
 Usage:
 ```bash
-python trade_trace_analyzer.py --detailed --output-dir .
+python trade_trace_analyzer.py --trace-file ../logs/trade_traces/trade_traces.jsonl \
+                               --detailed --output-dir .
 ```
+
+`--trace-file` must be given explicitly; its built-in default is an absolute
+path on the original author's machine (`c:\Projects\Model5\...`) and running
+without the flag fails with a `FileNotFoundError`.
 
 #### `create_summary.py`
 Creates readable summary and simplified CSV file
