@@ -306,7 +306,9 @@ python btc_graph_generator_fixed.py --file ../data/uptrend_15m.csv --type advanc
 # entry/exit markers and P&L over a price series
 python trade_analysis_visualizer_clean.py --trace-file ../logs/trade_traces/trade_traces.jsonl \
                                           --save trade_analysis.png
-python csv_trade_visualizer.py --trade-csv ../TRADE_ANALYSIS/trade_analysis_detailed.csv \
+# csv_trade_visualizer.py reads extracted_trades.csv, so build that first
+python extract_trade_data.py --trace-file ../logs/trade_traces/trade_traces.jsonl
+python csv_trade_visualizer.py --trade-csv extracted_trades.csv \
                                --external-market-csv ../data/uptrend_15m.csv
 
 # live chart that follows a training run
@@ -323,6 +325,11 @@ Three flag details are easy to get wrong:
   `logs/trade_traces/trade_traces.jsonl`, which from inside `GRAPH_GEN/`
   resolves to `GRAPH_GEN/logs/...`. Training writes its traces to `logs/` at the
   repository root, so pass the `../` path shown above.
+- `csv_trade_visualizer.py` does *not* read `TRADE_ANALYSIS/trade_analysis_detailed.csv`.
+  It requires `entry_datetime` and `exit_datetime` columns, and the analyser writes
+  `entry_datetime` and `close_datetime` - pointing it at that file dies with
+  `KeyError: 'exit_datetime'`. Feed it `extracted_trades.csv` from
+  `extract_trade_data.py`, which is also the flag's own default.
 - `csv_trade_visualizer.py` has two market-data flags and they are not
   interchangeable. `--market-csv` expects `extracted_market_data.csv` from
   `extract_trade_data.py`, which has a `datetime` column. A raw OHLCV file from

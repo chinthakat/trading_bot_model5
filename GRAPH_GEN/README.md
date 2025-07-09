@@ -73,8 +73,9 @@ by `TRADE_ANALYSIS/`, and draw entry/exit markers with P&L labels.
 python trade_analysis_visualizer_clean.py --trace-file ../logs/trade_traces/trade_traces.jsonl \
                                           --save trade_analysis.png
 
-# same idea, driven from analysis CSVs instead of traces
-python csv_trade_visualizer.py --trade-csv ../TRADE_ANALYSIS/trade_analysis_detailed.csv \
+# same idea, driven from extracted CSVs instead of traces
+# (run extract_trade_data.py below first - it writes extracted_trades.csv)
+python csv_trade_visualizer.py --trade-csv extracted_trades.csv \
                                --external-market-csv ../data/your_data.csv
 
 # chart that follows a run as it happens
@@ -91,6 +92,11 @@ Note the path and flag details:
   relative `logs/trade_traces/trade_traces.jsonl`, which from inside
   `GRAPH_GEN/` points at `GRAPH_GEN/logs/...`; training writes to `logs/` at the
   repository root.
+- `csv_trade_visualizer.py` reads the CSVs from `extract_trade_data.py`, not the
+  ones from `TRADE_ANALYSIS/`. It requires an `exit_datetime` column;
+  `trade_analysis_detailed.csv` names that column `close_datetime`, so passing it
+  fails with `KeyError: 'exit_datetime'`. Run `extract_trade_data.py` first and
+  pass the `extracted_trades.csv` it writes.
 - `csv_trade_visualizer.py` takes market data through either of two flags, and
   they expect different files. `--market-csv` is for `extracted_market_data.csv`
   produced by `extract_trade_data.py`, which carries a `datetime` column.
