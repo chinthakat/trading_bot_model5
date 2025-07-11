@@ -5,36 +5,20 @@ environment that simulates a leveraged futures account, a PPO agent built on
 Stable-Baselines3, a synthetic OHLCV data generator to train it on, and a set of
 tools that turn the resulting trade traces into CSVs and charts.
 
-## Status: superseded research sandbox, not runnable as checked out
+## Status
 
-This is the fifth iteration of a personal trading-bot experiment and it is no
-longer being developed. It is published for reference, not for use. Two things
-are worth knowing before you read further:
+Fifth iteration of a personal trading-bot experiment, no longer developed. Published for
+reference; it does not run from a fresh clone.
 
-- **The training entry point does not run from a fresh clone.**
-  `src/train_memory_efficient.py` imports `data.setup_data.DataProcessor` and
-  `src/training/data_manager.py` imports `..data.download_coinapi` and
-  `..data.setup_data`. There is no `src/data/` package in this repository, so
-  those imports fail immediately. The same script also expects
-  `config/training_config.json` and `config/logging_config.json`, which are not
-  here either - the repository's `.gitignore` has a blanket `*.json` rule that
-  excluded them. Neither the missing package nor the missing config files have
-  been reconstructed.
-- **Several tracked files are empty.** `src/btc_data_generator.py`,
-  `src/example_generator.py`, `GRAPH_GEN/btc_graph_generator.py`,
-  `generate_datasets.bat`, `generate_datasets.ps1` and
-  `scripts/test_individual_trade_closing.py` are all zero bytes. They were
-  committed as placeholders and never filled in. Working equivalents of the
-  first three live in `DATA_GEN/` and in the `_fixed` / `_simple` variants in
-  `GRAPH_GEN/` - see [Usage](#usage).
+- `src/train_memory_efficient.py` and `src/training/data_manager.py` import a `src/data/`
+  package that was never committed, and the `config/*.json` files they expect are absent.
+- Six tracked files are empty placeholders, including `src/btc_data_generator.py` and
+  `GRAPH_GEN/btc_graph_generator.py`. Working equivalents live in `DATA_GEN/` and in the
+  `_fixed` / `_simple` variants under `GRAPH_GEN/`.
+- No trained model, dataset or training log is included.
 
-What *does* work as checked out is the synthetic data generation
-(`DATA_GEN/`), the environment and reward code in `src/` (exercised by the
-scripts in `scripts/`), and the analysis and charting tools - provided you
-supply the CSV or JSONL files they read.
-
-There is no trained model, no dataset and no training log in this repository.
-Everything of that kind is gitignored.
+The synthetic data generation in `DATA_GEN/`, the environment and reward code in `src/`, and the
+analysis and charting tools all work, given the CSV or JSONL files they read.
 
 ## How it works
 
@@ -174,7 +158,7 @@ Read via `python-dotenv` from a `.env` file in the working directory.
 
 | Variable | Read by | Purpose |
 | --- | --- | --- |
-| `COINAPI_API_KEY` | `src/training/data_manager.py` | CoinAPI key for downloading historical OHLCV data. `DataManager.download_data()` raises if it is unset. This is the only environment variable anything in the repository reads. Note that `data_manager.py` cannot currently be imported - see [Status](#status-superseded-research-sandbox-not-runnable-as-checked-out). |
+| `COINAPI_API_KEY` | `src/training/data_manager.py` | CoinAPI key for downloading historical OHLCV data. `DataManager.download_data()` raises if it is unset. This is the only environment variable anything in the repository reads. Note that `data_manager.py` cannot currently be imported - see [Status](#status). |
 
 Never commit `.env`; it is gitignored. `.env.example` holds placeholders only.
 
@@ -266,7 +250,7 @@ Interactive mode is documented in
 [docs/interactive-training.md](docs/interactive-training.md).
 
 **This will fail on a fresh clone** for the reasons given under
-[Status](#status-superseded-research-sandbox-not-runnable-as-checked-out): the
+[Status](#status): the
 `src/data/` package and the `config/*.json` files are absent. The commands are
 recorded here because they are what the code expects, not because they work
 today.
@@ -393,41 +377,25 @@ individually with `python` instead.
 
 ## Known problems
 
-Recorded rather than fixed, since the project is not being developed further.
-
-- `src/data/` is missing, which breaks `src/train_memory_efficient.py` and
-  `src/training/data_manager.py` at import time.
-- `config/training_config.json` and `config/logging_config.json` are missing.
-- `GRAPH_GEN/trade_analysis_visualizer.py` is corrupted: from line 245 the rest
-  of the file is a single line of literal `\n` escape sequences, so it raises
-  `SyntaxError` on import. The `_clean`, `_fixed` and `_pure` variants parse
-  fine.
-- Six tracked files are zero bytes (listed under [Status](#status-superseded-research-sandbox-not-runnable-as-checked-out)).
-- `GRAPH_GEN/launcher.py`, `example_usage.py`, `debug_import.py`,
-  `test_interactive.py` and `summary.py` all refer to
-  `btc_graph_generator.BTCGraphGenerator`, which does not exist because that
-  file is empty.
-- Several scripts still carry the original author's absolute Windows paths under
-  `c:\Projects\Model5\`. `TRADE_ANALYSIS/trade_trace_analyzer.py` line 499 uses
-  one as the default for `--trace-file`, so the analyzer must always be given an
-  explicit `--trace-file`. `GRAPH_GEN/trade_analysis_visualizer_fixed.py` hard-codes
-  three more at lines 343, 344 and 355 - its trace file, market CSV and output
-  PNG - with no flags to override them, so that variant has to be edited before
-  it will run. Use `trade_analysis_visualizer_clean.py`, which takes the paths
-  as arguments.
-- `TRADE_ANALYSIS/check_rewards.py` and `DATA_GEN/analyze_custom1.py` read
-  hard-coded relative paths to CSVs that are not in the repository.
-- `src/data_analyzer.py` and `DATA_GEN/data_analyzer.py` are byte-for-byte
-  identical. Only the `DATA_GEN/` copy is referenced by any documentation or
-  tooling; the one in `src/` is an unused duplicate.
-- `src/utils/liquidation_tracker.py` is handed an unsigned `size_btc` with no
-  side (`environment.py` lines 1301 and 1339), and its
-  `calculate_unrealized_pnl()` applies the long formula `(price - entry) * size`
-  to every trade. Short positions therefore contribute P&L of the wrong sign to
-  the margin-level check, so `is_liquidation_imminent()` and
-  `get_trades_to_close()` will misjudge a book that contains shorts. The
-  environment's own P&L accounting (`_close_individual_trade`) handles the sign
-  correctly - only the liquidation guard is affected.
+- `GRAPH_GEN/trade_analysis_visualizer.py` is corrupted: from line 245 the rest of the file is a
+  single line of literal `\n` escape sequences, so it raises `SyntaxError` on import. The
+  `_clean`, `_fixed` and `_pure` variants parse fine.
+- `GRAPH_GEN/launcher.py`, `example_usage.py`, `debug_import.py`, `test_interactive.py` and
+  `summary.py` all refer to `btc_graph_generator.BTCGraphGenerator`, which does not exist because
+  that file is empty.
+- Several scripts carry absolute Windows paths under `c:\Projects\Model5\`.
+  `TRADE_ANALYSIS/trade_trace_analyzer.py` uses one as the default for `--trace-file`, and
+  `GRAPH_GEN/trade_analysis_visualizer_fixed.py` hard-codes three more with no flags to override
+  them. Use `trade_analysis_visualizer_clean.py`, which takes its paths as arguments.
+- `TRADE_ANALYSIS/check_rewards.py` and `DATA_GEN/analyze_custom1.py` read hard-coded relative
+  paths to CSVs that are not in the repository.
+- `src/data_analyzer.py` and `DATA_GEN/data_analyzer.py` are byte-for-byte identical; only the
+  `DATA_GEN/` copy is referenced anywhere.
+- `src/utils/liquidation_tracker.py` receives an unsigned `size_btc` with no side, and
+  `calculate_unrealized_pnl()` applies the long formula to every trade. Short positions therefore
+  contribute P&L of the wrong sign to the margin-level check, so `is_liquidation_imminent()` and
+  `get_trades_to_close()` misjudge a book containing shorts. The environment's own P&L accounting
+  handles the sign correctly; only the liquidation guard is affected.
 
 ## Risk and disclaimer
 
